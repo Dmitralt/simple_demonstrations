@@ -19,13 +19,11 @@
         }
 
         .deck {
-            position: relative;
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
             width: 200px;
             height: 300px;
-            margin-left: 750px;
-            /* смещение влево */
-            margin-top: 250px;
-            /* смещение вниз */
         }
 
         .deck:hover .card {
@@ -36,15 +34,10 @@
             transform: rotate(var(--rotation)) translateX(calc(var(--x-offset) * 1.5)) translateY(-40px) !important;
         }
 
-        .in-deck {}
-
         .card {
             position: absolute;
             width: 100%;
             height: 100%;
-
-            /*background-image: url('cards/Tarot_20.jpg');*/
-            /* Измените на вашу картинку */
             background-size: cover;
             background-position: center;
             border: 2px solid #bdc3c7;
@@ -52,8 +45,6 @@
             transition: transform 0.3s;
             cursor: pointer;
             transform-style: preserve-3d;
-            /* Для 3D эффектов */
-            transform: rotateY(0deg);
         }
 
         .card::before {
@@ -64,25 +55,20 @@
             background-size: cover;
             background-position: center;
             background-image: url('cards/card_back.jpg');
-            /* Цвет для обратной стороны карты */
             backface-visibility: hidden;
             border-radius: 10px;
-            /* Можно добавить дополнительные стили */
         }
 
         .moving {
             transition: none;
-            /* Убираем анимации для клонированной карты */
             z-index: 9999;
             cursor: grab;
             width: 200px;
             height: 300px;
             position: absolute;
-
             background-size: cover;
             background-position: center;
             transform: rotateY(0deg);
-            /* Делаем начальный поворот */
             transition: transform 0.6s;
         }
 
@@ -90,23 +76,35 @@
             transform: rotateY(180deg) scale(-1, 1);
         }
 
-        /* Вертикальная панель */
         .sidebar {
             position: absolute;
-            top: 0;
+            bottom: 0;
             right: 0;
-            width: 100px;
-            height: 100vh;
+            width: 100%;
+            height: 70px;
             background-color: #34495e;
             display: flex;
-            flex-direction: column;
             align-items: center;
-            padding-top: 20px;
+        }
+
+        .sidebar .sidebar-btns {
+            width: 50%;
+            height: 100%;
+
+            margin-left: 20px;
+            display: flex;
+            align-items: center;
+
+
+
+
+            justify-content: space-around;
+
         }
 
         .sidebar button {
             user-select: none;
-            width: 80%;
+            width: auto;
             padding: 10px;
             margin: 10px 0;
             border: none;
@@ -121,25 +119,85 @@
         .sidebar button:hover {
             background-color: #16a085;
         }
+
+        /* Адаптивная верстка для планшетов и телефонов */
+        @media (max-width: 768px) {
+            .deck {
+                width: 150px;
+                height: 225px;
+                right: 10px;
+                bottom: 10px;
+            }
+
+            .card {
+                width: 100%;
+                height: 100%;
+            }
+
+            .moving {
+                width: 150px;
+                height: 225px;
+            }
+
+            .sidebar {
+                height: 60px;
+            }
+
+            .sidebar button {
+                font-size: 14px;
+                padding: 8px;
+            }
+        }
+
+        /* Адаптивная верстка для мобильных устройств (телефоны) */
+        @media (max-width: 480px) {
+            .deck {
+                width: 120px;
+                height: 180px;
+                right: 5px;
+                bottom: 5px;
+            }
+
+            .moving {
+                width: 120px;
+                height: 180px;
+            }
+
+            .sidebar {
+                height: 50px;
+            }
+
+            .sidebar button {
+                font-size: 12px;
+                padding: 6px;
+            }
+        }
     </style>
 </head>
 
 <body>
     <div class="deck"></div>
     <div class="sidebar">
-        <button id="resetButton">reset</button>
-        <button id="flipButton">flip</button>
-        <button id="closeAllButton">close</button>
+        <div class="sidebar-btns"><button id="resetButton">Reset</button>
+            <button id="flipButton">Flip</button>
+            <button id="closeAllButton">Close</button>
+        </div>
+
     </div>
 
     <script>
-        // Параметры
-        const numCards = 7; // количество карт
-        const rotationCoef = 2; // коэффициент для поворота
-        const xOffsetCoef = 10; // коэффициент для смещения по X
+        const numCards = 7;
+        const rotationCoef = 2;
+        const xOffsetCoef = 10;
 
         const deck = document.querySelector('.deck');
-        let isRotated = false; // Флаг для отслеживания состояния поворота
+        let isRotated = false;
+
+        function hideDeckIfEmpty() {
+            if (generator.availableCount() === 0) {
+                deck.style.display = 'none'; // Скрыть колоду, если карт больше нет
+            }
+        }
 
         for (let i = 0; i < numCards; i++) {
             const card = document.createElement('div');
@@ -151,11 +209,10 @@
             card.style.setProperty('--x-offset', `${xOffset}px`);
 
             deck.appendChild(card);
-
-
-            //(Math.random() * -20)
             card.addEventListener('mousedown', (e) => startDragging(e, card));
+            card.addEventListener('touchstart', (e) => startDragging(e, card, true));
         }
+
         function createUniqueRandomGenerator() {
             let availableNumbers = Array.from({ length: 10 }, (_, i) => i);
 
@@ -166,89 +223,93 @@
                     }
                     const randomIndex = Math.floor(Math.random() * availableNumbers.length);
                     const randomNumber = availableNumbers[randomIndex];
-                    availableNumbers.splice(randomIndex, 1); // удаляем выбранное число из доступных
+                    availableNumbers.splice(randomIndex, 1);
+                    hideDeckIfEmpty();
                     return randomNumber;
                 },
                 reset: function () {
                     availableNumbers = Array.from({ length: 10 }, (_, i) => i);
+                    deck.style.display = 'block'; // Показать колоду при сбросе
+                },
+                availableCount: function () {
+                    return availableNumbers.length;
                 }
             };
         }
 
-
         const generator = createUniqueRandomGenerator()
 
-
-
-        function startDragging(event, card) {
+        function startDragging(event, card, isTouch = false) {
             let isClone = false;
             let targetCard = card;
+            event.preventDefault();
 
-            // Проверяем, если это не клонированная карта, создаем клон
             if (!card.classList.contains('moving')) {
                 const clone = card.cloneNode(true);
                 clone.classList.add('moving');
                 clone.classList.remove('in-deck');
                 clone.style.zIndex = '7';
-                //let number = (Math.floor(Math.random() * 20))
 
                 let number = generator.next();
                 clone.style.backgroundImage = "url('tarot_02/" + number + ".jpg')";
 
-
                 document.body.appendChild(clone);
-                moveCard(event, clone);
+                moveCard(event, clone, isTouch);
                 targetCard = clone;
                 isClone = true;
             }
 
-            // Обработчики для перемещения и завершения перемещения
-            function onMouseMove(e) {
-                moveCard(e, targetCard);
+            function onMove(e) {
+                moveCard(e, targetCard, isTouch);
             }
 
-            function onMouseUp() {
+            function onEnd() {
                 targetCard.style.cursor = 'grab';
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('mouseup', onMouseUp);
+                if (isTouch) {
+                    document.removeEventListener('touchmove', onMove);
+                    document.removeEventListener('touchend', onEnd);
+                } else {
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onEnd);
+                }
+
                 if (isClone) {
                     targetCard.addEventListener('mousedown', (e) => startDragging(e, targetCard));
+                    targetCard.addEventListener('touchstart', (e) => startDragging(e, targetCard, true));
                 }
             }
 
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
+            if (isTouch) {
+                document.addEventListener('touchmove', onMove);
+                document.addEventListener('touchend', onEnd);
+            } else {
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onEnd);
+            }
         }
 
-        function moveCard(event, card) {
-            card.style.left = `${event.pageX - card.offsetWidth / 2}px`;
-            card.style.top = `${event.pageY - card.offsetHeight / 2}px`;
+        function moveCard(event, card, isTouch = false) {
+            let x = isTouch ? event.touches[0].pageX : event.pageX;
+            let y = isTouch ? event.touches[0].pageY : event.pageY;
+            card.style.left = `${x - card.offsetWidth / 2}px`;
+            card.style.top = `${y - card.offsetHeight / 2}px`;
         }
 
-        // Обработчики для кнопок
         document.getElementById('resetButton').addEventListener('click', () => {
-            console.log('Сбросить');
             generator.reset();
-            // Удаление всех карт с классом 'moving'
             const movingCards = document.querySelectorAll('.card.moving');
             movingCards.forEach(card => card.remove());
         });
 
         document.getElementById('flipButton').addEventListener('click', () => {
-            console.log('Перевернуть');
-
             const movingCards = document.querySelectorAll('.card.moving');
-            movingCards.forEach(card => {
-                card.classList.toggle('rotated');
-            });
+            movingCards.forEach(card => card.classList.toggle('rotated'));
             isRotated = !isRotated;
         });
-        document.getElementById('closeAllButton').addEventListener('click', () => {
 
+        document.getElementById('closeAllButton').addEventListener('click', () => {
             const movingCards = document.querySelectorAll('.card.moving');
-            movingCards.forEach(card => {
-                card.classList.remove('rotated');
-            });
+            movingCards.forEach(card => card.classList.remove('rotated'));
             isRotated = !isRotated;
         });
     </script>
