@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Deck</title>
+    <style>
+        /* Основные стили */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #2c3e50;
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+
+        .deck {
+            position: relative;
+            width: 200px;
+            height: 300px;
+            margin-left: 750px;
+            /* смещение влево */
+            margin-top: 250px;
+            /* смещение вниз */
+        }
+
+        .deck:hover .card {
+            transform: rotate(var(--rotation)) translateX(var(--x-offset));
+        }
+
+        .in-deck:hover {
+            transform: rotate(var(--rotation)) translateX(calc(var(--x-offset) * 1.5)) translateY(-40px) !important;
+        }
+
+        .in-deck {}
+
+        .card {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+
+            /*background-image: url('cards/Tarot_20.jpg');*/
+            /* Измените на вашу картинку */
+            background-size: cover;
+            background-position: center;
+            border: 2px solid #bdc3c7;
+            border-radius: 10px;
+            transition: transform 0.3s;
+            cursor: pointer;
+            transform-style: preserve-3d;
+            /* Для 3D эффектов */
+            transform: rotateY(0deg);
+        }
+
+        .card::before {
+            content: "";
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            background-image: url('cards/card_back.jpg');
+            /* Цвет для обратной стороны карты */
+            backface-visibility: hidden;
+            border-radius: 10px;
+            /* Можно добавить дополнительные стили */
+        }
+
+        .moving {
+            transition: none;
+            /* Убираем анимации для клонированной карты */
+            z-index: 9999;
+            cursor: grab;
+            width: 200px;
+            height: 300px;
+            position: absolute;
+
+            background-size: cover;
+            background-position: center;
+            transform: rotateY(0deg);
+            /* Делаем начальный поворот */
+            transition: transform 0.6s;
+        }
+
+        .rotated {
+            transform: rotateY(180deg) scale(-1, 1);
+        }
+
+        /* Вертикальная панель */
+        .sidebar {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100px;
+            height: 100vh;
+            background-color: #34495e;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 20px;
+        }
+
+        .sidebar button {
+            user-select: none;
+            width: 80%;
+            padding: 10px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+            background-color: #1abc9c;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar button:hover {
+            background-color: #16a085;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="deck"></div>
+    <div class="sidebar">
+        <button id="resetButton">reset</button>
+        <button id="flipButton">flip</button>
+        <button id="closeAllButton">close</button>
+    </div>
+
+    <script>
+        // Параметры
+        const numCards = 7; // количество карт
+        const rotationCoef = 2; // коэффициент для поворота
+        const xOffsetCoef = 10; // коэффициент для смещения по X
+
+        const deck = document.querySelector('.deck');
+        let isRotated = false; // Флаг для отслеживания состояния поворота
+
+        for (let i = 0; i < numCards; i++) {
+            const card = document.createElement('div');
+            card.className = 'card in-deck';
+            const rotation = (-rotationCoef * (numCards - 1) / 2) + (i * rotationCoef);
+            const xOffset = (-xOffsetCoef * (numCards - 1) / 2) + (i * xOffsetCoef);
+            card.style.zIndex = numCards - i;
+            card.style.setProperty('--rotation', `${rotation}deg`);
+            card.style.setProperty('--x-offset', `${xOffset}px`);
+
+            deck.appendChild(card);
+
+
+            //(Math.random() * -20)
+            card.addEventListener('mousedown', (e) => startDragging(e, card));
+        }
+        function createUniqueRandomGenerator() {
+            let availableNumbers = Array.from({ length: 10 }, (_, i) => i);
+
+            return {
+                next: function () {
+                    if (availableNumbers.length === 0) {
+                        throw new Error("No more unique numbers available. Please reset.");
+                    }
+                    const randomIndex = Math.floor(Math.random() * availableNumbers.length);
+                    const randomNumber = availableNumbers[randomIndex];
+                    availableNumbers.splice(randomIndex, 1); // удаляем выбранное число из доступных
+                    return randomNumber;
+                },
+                reset: function () {
+                    availableNumbers = Array.from({ length: 10 }, (_, i) => i);
+                }
+            };
+        }
+
+
+        const generator = createUniqueRandomGenerator()
+
+
+
+        function startDragging(event, card) {
+            let isClone = false;
+            let targetCard = card;
+
+            // Проверяем, если это не клонированная карта, создаем клон
+            if (!card.classList.contains('moving')) {
+                const clone = card.cloneNode(true);
+                clone.classList.add('moving');
+                clone.classList.remove('in-deck');
+                clone.style.zIndex = '7';
+                //let number = (Math.floor(Math.random() * 20))
+
+                let number = generator.next();
+                clone.style.backgroundImage = "url('tarot_02/" + number + ".jpg')";
+
+
+                document.body.appendChild(clone);
+                moveCard(event, clone);
+                targetCard = clone;
+                isClone = true;
+            }
+
+            // Обработчики для перемещения и завершения перемещения
+            function onMouseMove(e) {
+                moveCard(e, targetCard);
+            }
+
+            function onMouseUp() {
+                targetCard.style.cursor = 'grab';
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                if (isClone) {
+                    targetCard.addEventListener('mousedown', (e) => startDragging(e, targetCard));
+                }
+            }
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        }
+
+        function moveCard(event, card) {
+            card.style.left = `${event.pageX - card.offsetWidth / 2}px`;
+            card.style.top = `${event.pageY - card.offsetHeight / 2}px`;
+        }
+
+        // Обработчики для кнопок
+        document.getElementById('resetButton').addEventListener('click', () => {
+            console.log('Сбросить');
+            generator.reset();
+            // Удаление всех карт с классом 'moving'
+            const movingCards = document.querySelectorAll('.card.moving');
+            movingCards.forEach(card => card.remove());
+        });
+
+        document.getElementById('flipButton').addEventListener('click', () => {
+            console.log('Перевернуть');
+
+            const movingCards = document.querySelectorAll('.card.moving');
+            movingCards.forEach(card => {
+                card.classList.toggle('rotated');
+            });
+            isRotated = !isRotated;
+        });
+        document.getElementById('closeAllButton').addEventListener('click', () => {
+
+            const movingCards = document.querySelectorAll('.card.moving');
+            movingCards.forEach(card => {
+                card.classList.remove('rotated');
+            });
+            isRotated = !isRotated;
+        });
+    </script>
+</body>
+
+</html>
