@@ -38,7 +38,8 @@
             position: absolute;
             width: 100%;
             height: 100%;
-            background-size: cover;
+            background-size: contain;
+            background-repeat: no-repeat;
             background-position: center;
             border: 2px solid #bdc3c7;
             border-radius: 10px;
@@ -90,16 +91,10 @@
         .sidebar .sidebar-btns {
             width: 50%;
             height: 100%;
-
             margin-left: 20px;
             display: flex;
             align-items: center;
-
-
-
-
             justify-content: space-around;
-
         }
 
         .sidebar button {
@@ -112,12 +107,15 @@
             background-color: #1abc9c;
             color: white;
             font-size: 16px;
+            font-weight: bold;
             cursor: pointer;
             transition: background-color 0.3s;
+            border-radius: 50%;
         }
 
         .sidebar button:hover {
             background-color: #16a085;
+            outline: 1px solid white;
         }
 
         /* Адаптивная верстка для планшетов и телефонов */
@@ -172,24 +170,39 @@
                 padding: 6px;
             }
         }
+
+        #message {
+            position: absolute;
+            background: transparent;
+            font-size: 64px;
+            color: white;
+
+            padding: 5px;
+
+            transition: opacity 0.5s ease;
+
+            opacity: 0;
+
+            pointer-events: none;
+
+        }
     </style>
 </head>
 
 <body>
     <div class="deck"></div>
     <div class="sidebar">
-        <div class="sidebar-btns"><button id="resetButton">Reset</button>
-            <button id="flipButton">Flip</button>
-            <button id="closeAllButton">Close</button>
+        <div class="sidebar-btns">
+            <button id="resetButton">↺</button>
         </div>
-
     </div>
+    <div id="message">👆</div>
 
     <script>
         const numCards = 7;
         const rotationCoef = 2;
         const xOffsetCoef = 10;
-
+        let firstDrag = true; // Флаг для отслеживания первого перетаскивания
         const deck = document.querySelector('.deck');
         let isRotated = false;
 
@@ -214,7 +227,7 @@
         }
 
         function createUniqueRandomGenerator() {
-            let availableNumbers = Array.from({ length: 10 }, (_, i) => i);
+            let availableNumbers = Array.from({ length: 15 }, (_, i) => i);
 
             return {
                 next: function () {
@@ -237,7 +250,7 @@
             };
         }
 
-        const generator = createUniqueRandomGenerator()
+        const generator = createUniqueRandomGenerator();
 
         function startDragging(event, card, isTouch = false) {
             let isClone = false;
@@ -259,6 +272,9 @@
                 isClone = true;
             }
 
+            let lastTouchTime = 0;
+
+
             function onMove(e) {
                 moveCard(e, targetCard, isTouch);
             }
@@ -276,6 +292,46 @@
                 if (isClone) {
                     targetCard.addEventListener('mousedown', (e) => startDragging(e, targetCard));
                     targetCard.addEventListener('touchstart', (e) => startDragging(e, targetCard, true));
+
+                    // Добавляем обработчик двойного клика для компьютеров
+                    targetCard.addEventListener('dblclick', () => {
+                        targetCard.classList.toggle('rotated');
+                    });
+
+                    // Добавляем обработчик двойного касания для мобильных устройств
+                    targetCard.addEventListener('touchstart', (e) => {
+                        const currentTime = new Date().getTime();
+                        const timeSinceLastTouch = currentTime - lastTouchTime;
+
+                        if (timeSinceLastTouch < 300) {
+                            targetCard.classList.toggle('rotated');
+                        }
+
+                        lastTouchTime = currentTime;
+                    });
+                }
+
+                // Показать сообщение при первом перетаскивании
+                if (firstDrag) {
+                    const message = document.getElementById('message');
+                    message.style.left = `${targetCard.getBoundingClientRect().right + 10}px`;
+                    message.style.top = `${targetCard.getBoundingClientRect().top + (targetCard.offsetHeight / 2)}px`;
+                    message.style.display = 'block';
+
+                    message.style.opacity = '1';
+                    setTimeout(() => {
+                        message.style.opacity = '0';
+                    }, 400);
+
+                    setTimeout(() => {
+                        message.style.opacity = '1';
+                    }, 600);
+
+                    setTimeout(() => {
+                        message.style.opacity = '0';
+                    }, 1000);
+
+                    firstDrag = false;
                 }
             }
 
@@ -300,19 +356,8 @@
             const movingCards = document.querySelectorAll('.card.moving');
             movingCards.forEach(card => card.remove());
         });
-
-        document.getElementById('flipButton').addEventListener('click', () => {
-            const movingCards = document.querySelectorAll('.card.moving');
-            movingCards.forEach(card => card.classList.toggle('rotated'));
-            isRotated = !isRotated;
-        });
-
-        document.getElementById('closeAllButton').addEventListener('click', () => {
-            const movingCards = document.querySelectorAll('.card.moving');
-            movingCards.forEach(card => card.classList.remove('rotated'));
-            isRotated = !isRotated;
-        });
     </script>
 </body>
 
 </html>
+і
